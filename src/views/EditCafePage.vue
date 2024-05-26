@@ -1,11 +1,22 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { doc, updateDoc } from 'firebase/firestore'
+import { useDocument, useFirestore } from 'vuefire'
+import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseForm from '@/components/base/BaseForm.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseCheckbox from '@/components/base/BaseCheckbox.vue'
 import FormLayout from '@/layouts/FormLayout.vue'
+
+const db = useFirestore()
+const route = useRoute()
+const router = useRouter()
+
+const docRef = doc(db, 'cafes', route.params.id)
+
+const cafeSource = useDocument(docRef)
 
 const editCafe = ref({
   name: '',
@@ -15,12 +26,26 @@ const editCafe = ref({
   description: '',
   favorite: true,
 })
+
+watch(cafeSource, (cafeSource) => {
+  editCafe.value = {
+    ...cafeSource,
+  }
+})
+
+async function updateCafe() {
+  const updatedDoc = await updateDoc(docRef,{
+    ...editCafe.value,
+  })
+  router.push('/')
+
+}
 </script>
 
 <template>
   <FormLayout>
     <template v-slot:title>
-      <h1 class="mb-4">Edit {{ editCafe?.name ? editCafe.name : '' }}</h1>
+      <h1 class="mb-4">Edit {{ cafeSource?.name ? cafeSource.name : '' }}</h1>
     </template>
     <template v-slot:content>
       <BaseCard>
@@ -55,7 +80,7 @@ const editCafe = ref({
           </BaseForm>
         </template>
         <template v-slot:actions>
-          <BaseButton variant="tonal" color="success">
+          <BaseButton variant="tonal" color="success" @click="updateCafe">
             Save Changes
           </BaseButton>
           <BaseButton to="/" variant="tonal" color="error" outline>
